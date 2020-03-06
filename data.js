@@ -11,15 +11,6 @@ const svg = d3.select("body").append("svg")
 
 let top10 = [];
 
-// Add Header
-svg.append("text")
-  .attr("x", (width / 2))
-  .attr("y", 10 - (margin.top / 2))
-  .attr("text-anchor", "middle")
-  .style("font-size", "30px")
-  .style("text-decoration", "underline")
-  .text("World Happiness Study");
-
 const findLargest10 = (data, category) => {
   data.sort((a, b) => b[category] - a[category]);
   return data.slice(0, 10);
@@ -48,9 +39,19 @@ const render = async (category) => {
   const data = await d3.csv('world-happiness/2019.csv');
 
   top10 = findLargest10(data, category);
+  const x = scaleX(top10, category);
+  const y = scaleY(top10);
 
-  console.log(top10);
+  // Add Header
+  svg.append("text")
+    .attr("x", (width / 2))
+    .attr("y", 30 - (margin.top / 2))
+    .attr("text-anchor", "middle")
+    .style("font-size", "30px")
+    .style("text-decoration", "underline")
+    .text("World Happiness Study");
 
+  // Add X-Axis Label
   svg.append("text")
     .attr("x", (width / 2))
     .attr("y", margin.top - 20 + height)
@@ -59,41 +60,69 @@ const render = async (category) => {
     .style("text-decoration", "underline")
     .text(`Effects of ${category} on Happiness`);
 
-
+  // Add Bars
   svg.append("g")
     .attr("fill", "steelblue")
     .selectAll("rect")
     .data(top10)
-    .join("rect")
-    .attr("x", scaleX(top10, category)(0))
-    .attr("y", (_, i) => {
-      console.log(scaleY(top10).bandwidth() * i);
-      scaleY(top10).bandwidth() * (i + 2);
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", x(0))
+    .attr("y", (d, i) => {
+      for (i == 0; i < top10.length; i++) {
+        return y.bandwidth() * (i + 2);
+      }
     })
-    // .attr("y", 29 * 3)
-    .attr("width", d => scaleX(top10, category)(d[category]) - scaleX(top10, category)(0))
-    .attr("height", scaleY(top10).bandwidth());
+    .attr("width", d => x(d[category]) - x(0))
+    .attr("height", y.bandwidth());
 
 
-  // console.log(top10);
-  // svg.append("g")
-  //   .attr("fill", "white")
-  //   .attr("text-anchor", "end")
-  //   .attr("font-family", "sans-serif")
-  //   .attr("font-size", 12)
-  //   .selectAll("text")
-  //   .data(top10)
-  //   .join("text")
-  //   .attr("x", d => scaleX(top10, category)(d[category]) - 4)
-  //   .attr("y", (d, i) => scaleY(top10)(i) + scaleY(top10).bandwidth() / 2)
-  //   .attr("dy", "0.35em")
-  //   .text(d => scaleX(top10, category)(d[category]));
+  // Add Numeric Value of Bars
+  svg.append("g")
+    .attr("fill", "white")
+    .attr("text-anchor", "end")
+    .attr("font-family", "sans-serif")
+    .attr("font-size", 12)
+    .selectAll("text")
+    .data(top10)
+    .join("text")
+    .attr("x", d => x(d[category]) - 10)
+    .attr("y", (d, i) => {
+      for (i > 0; i < top10.length; i++) {
+        return (y.bandwidth() * (i + 2)) + 10;
+      }
+    })
+    .attr("dy", "0.35em")
+    .text(d => x.tickFormat(20)(d[category]));
 
-  const x = svg.append("g");
-  xAxis(x, top10, category);
+  const axisX = svg.append("g");
+  xAxis(axisX, top10, category);
 
-  const y = svg.append("g");
-  yAxis(y, top10);
+  const axisY = svg.append("g");
+  yAxis(axisY, top10);
 };
 
 render("GDP per capita");
+
+const showButtons = () => {
+  const buttonBar = document.getElementById("button-bar");
+
+  const indicators = [
+    "GDP per capita",
+    "Social support",
+    "Healthy life expectancy",
+    "Generosity"
+  ];
+
+  indicators.forEach((indicator) => {
+    const bttn = document.createElement("button");
+    bttn.textContent = indicator;
+    bttn.onclick = () => {
+      svg.selectAll("*").remove();
+      render(indicator);
+    };
+    buttonBar.appendChild(bttn);
+  });
+};
+showButtons();
